@@ -1,0 +1,52 @@
+/chunk/next <-- read/write next chunk
+/chunk/prev <-- read/write prev chunk
+/chunk/current <-- read/write current chunk, mode is always replace
+
+/chunk/mode <-- read/write current mode
+	mode can be "INSERT" or "REPLACE"
+/chunk/num <-- read/write line number
+
+/chunk/preload/amount <-- read/write the amount of lines of to preload
+/chunk/preload/next
+/chunk/preload/prev
+/chunk/preload/current <-- last line of preload, mirrors chunk
+
+/file/dot/search <-- read/write the current regex to search
+/file/dot/select/ <-- read/write the current selection(s)
+	access like so: /file/dot/select/<line>/<offset>/<length>
+
+/file/dot/chunk/ <-- read/write selections as chunks.
+
+/file/dot/match/ <-- all the matches, sorted by line number
+	access like so: /file/dot/match/1/line <-- linenumber
+	                /file/dot/match/1/offset <-- offset from start of line
+	                /file/dot/match/1/length <-- how long
+	                /file/dot/match/1/dot    <-- the actual match text
+	WARNING: dot can span multiple lines, linenumber is THE STARTING POSITION
+
+/file/current <-- read/write current filename
+	when writing, filename has to be present in files
+/files/       <-- manage open files
+	access like so:
+	create file - open file, whereas the filename is the name in the editor
+		and the content is the real path
+	Twrite  - write to disk
+	Tread   - reread file from disk
+	Tremove - close file 
+
+Errors:
+EFILE_NONE    - no file is in current
+EFILE_NOREAD  - cant read file
+EFILE_NOWRITE - cant write file
+EFILE_NODUP   - file with that name already exists
+EFILE_NOOPEN  - file is already open
+EFILE_DIRTY   - there are changes not written
+EFILE_CHANGE  - rereading the file would discard changes
+
+EDOT_NOTREGEX    - the regex contains errors
+EDOT_OUTOFBOUNDS - selecting text outside of scope
+
+EMODE_NONE    - no mode is specified
+EMODE_INVALID - invalid mode
+
+ECHUNK_NOPRELOAD - no preload specified

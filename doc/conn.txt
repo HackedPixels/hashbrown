@@ -1,0 +1,32 @@
+FID = {
+	"1": { /* connection fid */
+		"13": "(1 0001 000230)"
+		"17": "(1 0001 000232)" 
+	}
+}
+
+ROOT=(1 0001 000230)
+
+QID = {
+	(1 0001 000230): {
+		name: ""
+		content: [
+			(1 0001 000230), (1 0001 000231)
+		]
+		callback: NULL
+	},
+	(1 0001 000231): {
+		name: "file",
+		content: [
+			(1 0001 000230), (0 0001 000232)
+		]
+		callback: NULL 
+	}
+	(0 0001 000232): {
+		name: "current",
+		content: [
+			(1 0001 000231)
+		]
+		callback: setcurrentfile;
+	}
+}
