@@ -46,6 +46,8 @@ struct msg9p server_error(uint8_t* errtype, uint8_t* errmsg);
 struct msg9p error_server_not_client(struct msg9p msg, struct msg9pState* state);
 struct msg9p error_not_implemented(struct msg9p msg, struct msg9pState* state);
 
+uint32_t* test_read(uint32_t nargs, ...);
+
 #define NCONNECTIONS 3
 #define NMAXFILES 10
 struct msg9pFidMap* fidMap;
@@ -86,7 +88,7 @@ struct msg9p (*msgMap[NMAP]) (struct msg9p msg, struct msg9pState* state) = {
 #define NFILES 7
 struct msg9pFileInit filemapInit[] = {
 	{"/chunk", DIR, NULL},
-	{"/chunk/next", FILE, NULL},
+	{"/chunk/next", FILE, test_read},
 	{"/chunk/prev", FILE, NULL},
 	{"/chunk/current", FILE, NULL},
 	{"/chunk/mode", FILE, NULL},
@@ -101,8 +103,8 @@ struct msg9p messages[] = {
 	{.type=TATTACH, .fid=0x02, .afid=0x03, .uname={.length=3, .string="jan"}, .aname={.length=12, .string="HackedPixels"}},
 	{.type=TWALK, .fid=0x02, .newfid=0x03, .nwname=1},
 	{.type=TCREATE, .fid=0x03, .name={.length=4, .string="test"}, .perm=TYPE_DIR, .mode=0x00},
-	{.type=TWALK, .fid=0x02, .newfid=0x04, .nwname=1},
-	{.type=TREAD, .fid=0x03, .offset=0x00, .count=0x07}
+	{.type=TWALK, .fid=0x03, .newfid=0x04, .nwname=1},
+	{.type=TREAD, .fid=0x04, .offset=0x00, .count=0x07}
 };
 
 int main(int argc, char** argv) {
@@ -119,8 +121,8 @@ int main(int argc, char** argv) {
 	messages[3].wname[0].string = strdup("/chunk");
 
 	messages[5].wname = malloc(sizeof(msg9pString));
-	messages[5].wname[0].length = 11;
-	messages[5].wname[0].string = strdup("/test");
+	messages[5].wname[0].length = 5;
+	messages[5].wname[0].string = strdup("/next");
 
 	printf("\x1b[1;35m*\x1b[m\x1b[1m Creating file system... \x1b[m\n");
 	globalState.map = mapCreate(32);
@@ -493,6 +495,7 @@ server_handle_read(struct msg9p msg, struct msg9pState* state)
 	if (startQid.type == 0x01)
 	{
 		msg9pQidToStr(qidStr, startQid);
+		printf("DIR: %s\n", qidStr);
 		dir = (struct msg9pFile*) mapSearch(state->map, qidStr);
 		/* Todo Check if empty */
 		
@@ -522,13 +525,47 @@ server_handle_read(struct msg9p msg, struct msg9pState* state)
 		msg9pQidToStr(qidStr, startQid);
 		file = (struct msg9pFile*) mapSearch(state->map, qidStr);
 		/* TODO: Check if empty */
-		ndcontent = *((uint32_t*) ((file->callback)(3, &dcontent, msg.offset, msg.count)));
+		if (file->callback == NULL)
+		{
+			return server_error("EDEADFILE", "its dead jim");
+		}
+
+		uint32_t* pndcontent = (uint32_t*) ((file->callback)(3, &dcontent, msg.offset, msg.count));
+		ndcontent = *pndcontent;
+		free(pndcontent);
+		printf("CONTENT (%d): %s\n", ndcontent, dcontent);
 	}
 
 	rmsg.count = ndcontent;
 	rmsg.data = dcontent;
 
 	return rmsg;
+}
+
+uint32_t*
+test_read(uint32_t nargs, ...)
+{
+	uint32_t* ndcontent;
+	uint8_t** dcontent;
+	uint32_t offset;
+	uint32_t count;
+
+	ndcontent = malloc(sizeof(uint32_t));
+
+	va_list argp;
+
+	va_start(argp, nargs);
+	dcontent = va_arg(argp, uint8_t**);
+	offset   = va_arg(argp, uint32_t);
+	count    = va_arg(argp, uint32_t);
+
+	*ndcontent = 3;
+	*dcontent = malloc((*ndcontent) * sizeof(uint8_t));
+	*dcontent = strdup("ASD");
+	
+	va_end(argp);
+
+	return ndcontent;
 }
 
 struct msg9p error_server_not_client(struct msg9p msg, struct msg9pState* state)
